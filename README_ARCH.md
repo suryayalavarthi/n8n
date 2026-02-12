@@ -2,156 +2,181 @@
 
 > Auto-generated on 2026-02-12 by Repo-to-Blueprint Architect
 
-## Technical Stack Summary
+# Technical Stack Summary
 
 - **Languages**: TypeScript, JavaScript, Python, Node.js
 - **Frontend**: Vue.js, Storybook, Chromatic (visual testing)
-- **Backend**: Express.js, NestJS patterns, LangChain, LLM integrations (OpenAI, Claude)
-- **Database**: PostgreSQL (primary), SQLite (dev/embedded)
-- **AI/ML**: LangChain, LLM adapters, embeddings, tokenization (tiktoken), evaluation frameworks
-- **Infrastructure**: Docker, Kubernetes-ready, GitHub Actions CI/CD, Trivy security scanning
-- **Package Management**: npm/yarn monorepo (pnpm workspaces), Biome linting
-- **Testing**: Jest, Playwright (E2E), integration tests, evaluation harness
-- **Observability**: Telemetry, token tracking, LangSmith integration, tracing
+- **Backend**: Node.js/Express, NestJS patterns, LangChain (AI/LLM integration)
+- **Database**: PostgreSQL (primary), support for multiple DB types
+- **AI/ML**: LangChain, OpenAI integration, LLM-based agents, embeddings, tokenization
+- **Infrastructure**: Docker (multi-stage builds), Kubernetes-ready, GitHub Actions CI/CD
+- **Testing**: Jest, Playwright (E2E), Vitest patterns, unit/integration/E2E coverage
+- **Package Management**: npm/pnpm monorepo (18,660+ files across packages)
+- **Code Quality**: Biome (linting/formatting), ESLint, Prettier, TypeScript strict mode
+- **Observability**: Telemetry, tracing (LangSmith integration), token usage tracking
+- **Security**: Trivy scanning, SBOM generation, Poutine supply-chain checks
 
-## Architecture Blueprint
+---
+
+# Architecture Blueprint
 
 ```mermaid
 flowchart TD
     subgraph Client["🖥️ Client Layer"]
-        UI["Vue.js UI<br/>Editor & Dashboard"]
-        Storybook["Storybook<br/>Component Library"]
+        WebUI["Web UI<br/>Vue.js + Storybook"]
+        CLI["CLI<br/>npx n8n"]
+        MobileApp["Mobile/API Clients"]
     end
 
     subgraph Server["⚙️ Backend Services"]
-        API["Express/NestJS<br/>REST API"]
+        APIGateway["API Gateway<br/>Express/NestJS"]
         WorkflowEngine["Workflow Engine<br/>Execution Runtime"]
-        AIBuilder["AI Workflow Builder<br/>LangChain Agent"]
-        CodeBuilder["Code Builder<br/>Agent System"]
+        AIBuilder["AI Workflow Builder<br/>LangChain Agents"]
+        NodeRegistry["Node Registry<br/>400+ Integrations"]
+        AuthService["Auth Service<br/>SSO/Credentials"]
         SessionMgr["Session Manager<br/>State Persistence"]
     end
 
-    subgraph AIServices["🤖 AI/LLM Services"]
-        LLMAdapter["LLM Adapter<br/>OpenAI/Claude/etc"]
-        MemorySystem["Memory System<br/>Chat History & Context"]
-        TokenCounter["Token Counter<br/>Tiktoken"]
-        EvalFramework["Evaluation Framework<br/>LLM Judge & Metrics"]
+    subgraph AILayer["🤖 AI/LLM Layer"]
+        LLMProvider["LLM Provider<br/>OpenAI/Custom"]
+        EmbeddingService["Embedding Service<br/>Tokenization"]
+        MemoryAdapter["Memory Adapter<br/>Chat History"]
+        ToolExecutor["Tool Executor<br/>Agent Tools"]
     end
 
-    subgraph DataLayer["💾 Data Layer"]
-        PostgreSQL[("PostgreSQL<br/>Primary DB")]
-        SQLite[("SQLite<br/>Embedded/Dev")]
-        Cache["Cache Control<br/>Prompt Caching"]
+    subgraph Data["💾 Data Layer"]
+        PostgresDB[("PostgreSQL<br/>Workflows/Executions")]
+        RedisCache["Redis Cache<br/>Sessions"]
+        FileStorage["File Storage<br/>Artifacts"]
     end
 
-    subgraph ExternalServices["🌐 External Services"]
-        LLMProviders{{"LLM Providers<br/>OpenAI/Anthropic"}}
-        NodeRegistry{{"Node Registry<br/>Integration Catalog"}}
-        LangSmith{{"LangSmith<br/>Tracing & Eval"}}
+    subgraph External["🌐 External Services"]
+        GithubAPI{{"GitHub API<br/>CI/CD"}}
+        DockerRegistry{{"Docker Registry<br/>GHCR"}}
+        LangSmith{{"LangSmith<br/>Tracing"}}
+        IntegrationAPIs{{"400+ APIs<br/>Slack/Gmail/etc"}}
     end
 
-    subgraph DevOps["🔧 DevOps & CI/CD"]
-        GHActions["GitHub Actions<br/>Multi-stage Pipelines"]
-        Docker["Docker Images<br/>Base/Runner/n8n"]
-        SecurityScan["Trivy & Poutine<br/>Vulnerability Scanning"]
+    subgraph Infra["🏗️ Infrastructure"]
+        DockerImage["Docker Image<br/>Multi-stage Build"]
+        K8sDeployment["Kubernetes<br/>Deployment"]
+        GitHubActions["GitHub Actions<br/>CI/CD Pipelines"]
     end
 
-    UI -->|HTTP/WebSocket| API
-    UI -->|Component Preview| Storybook
-    API -->|Orchestrates| WorkflowEngine
-    API -->|Builds Workflows| AIBuilder
-    API -->|Code Generation| CodeBuilder
-    API -->|Session State| SessionMgr
+    Client -->|HTTP/WebSocket| APIGateway
+    APIGateway -->|Orchestrate| WorkflowEngine
+    APIGateway -->|Query| AuthService
+    WorkflowEngine -->|Execute| NodeRegistry
+    WorkflowEngine -->|Persist State| SessionMgr
     
-    AIBuilder -->|Uses| LLMAdapter
-    CodeBuilder -->|Uses| LLMAdapter
-    AIBuilder -->|Manages| MemorySystem
-    CodeBuilder -->|Manages| MemorySystem
-    LLMAdapter -->|Token Estimation| TokenCounter
+    AIBuilder -->|LLM Calls| LLMProvider
+    AIBuilder -->|Token Count| EmbeddingService
+    AIBuilder -->|History| MemoryAdapter
+    AIBuilder -->|Execute Tools| ToolExecutor
+    ToolExecutor -->|Modify Workflow| WorkflowEngine
     
-    EvalFramework -->|Evaluates| AIBuilder
-    EvalFramework -->|Metrics| LangSmith
+    APIGateway -->|Read/Write| PostgresDB
+    SessionMgr -->|Cache| RedisCache
+    WorkflowEngine -->|Store Results| FileStorage
     
-    WorkflowEngine -->|Reads/Writes| PostgreSQL
-    SessionMgr -->|Persists State| PostgreSQL
-    WorkflowEngine -->|Dev Mode| SQLite
-    MemorySystem -->|Cache| Cache
+    NodeRegistry -->|Call| IntegrationAPIs
+    LLMProvider -->|Trace| LangSmith
     
-    LLMAdapter -->|API Calls| LLMProviders
-    WorkflowEngine -->|Loads Nodes| NodeRegistry
-    AIBuilder -->|Traces| LangSmith
-    
-    GHActions -->|Builds| Docker
-    GHActions -->|Scans| SecurityScan
-    Docker -->|Deploys| WorkflowEngine
+    GitHubActions -->|Build| DockerImage
+    DockerImage -->|Push| DockerRegistry
+    DockerImage -->|Deploy| K8sDeployment
+    K8sDeployment -->|Run| WorkflowEngine
 
-    style UI fill:#1f6feb,stroke:#58a6ff,color:#fff
-    style Storybook fill:#1f6feb,stroke:#58a6ff,color:#fff
-    style API fill:#238636,stroke:#3fb950,color:#fff
+    style WebUI fill:#1f6feb,stroke:#58a6ff,color:#fff
+    style CLI fill:#1f6feb,stroke:#58a6ff,color:#fff
+    style MobileApp fill:#1f6feb,stroke:#58a6ff,color:#fff
+    
+    style APIGateway fill:#238636,stroke:#3fb950,color:#fff
     style WorkflowEngine fill:#238636,stroke:#3fb950,color:#fff
     style AIBuilder fill:#238636,stroke:#3fb950,color:#fff
-    style CodeBuilder fill:#238636,stroke:#3fb950,color:#fff
+    style NodeRegistry fill:#238636,stroke:#3fb950,color:#fff
+    style AuthService fill:#238636,stroke:#3fb950,color:#fff
     style SessionMgr fill:#238636,stroke:#3fb950,color:#fff
-    style LLMAdapter fill:#238636,stroke:#3fb950,color:#fff
-    style MemorySystem fill:#238636,stroke:#3fb950,color:#fff
-    style TokenCounter fill:#238636,stroke:#3fb950,color:#fff
-    style EvalFramework fill:#238636,stroke:#3fb950,color:#fff
-    style PostgreSQL fill:#da3633,stroke:#f85149,color:#fff
-    style SQLite fill:#da3633,stroke:#f85149,color:#fff
-    style Cache fill:#da3633,stroke:#f85149,color:#fff
-    style LLMProviders fill:#8b949e,stroke:#c9d1d9,color:#fff
-    style NodeRegistry fill:#8b949e,stroke:#c9d1d9,color:#fff
+    
+    style LLMProvider fill:#238636,stroke:#3fb950,color:#fff
+    style EmbeddingService fill:#238636,stroke:#3fb950,color:#fff
+    style MemoryAdapter fill:#238636,stroke:#3fb950,color:#fff
+    style ToolExecutor fill:#238636,stroke:#3fb950,color:#fff
+    
+    style PostgresDB fill:#da3633,stroke:#f85149,color:#fff
+    style RedisCache fill:#da3633,stroke:#f85149,color:#fff
+    style FileStorage fill:#da3633,stroke:#f85149,color:#fff
+    
+    style GithubAPI fill:#8b949e,stroke:#c9d1d9,color:#fff
+    style DockerRegistry fill:#8b949e,stroke:#c9d1d9,color:#fff
     style LangSmith fill:#8b949e,stroke:#c9d1d9,color:#fff
-    style GHActions fill:#8b949e,stroke:#c9d1d9,color:#fff
-    style Docker fill:#8b949e,stroke:#c9d1d9,color:#fff
-    style SecurityScan fill:#8b949e,stroke:#c9d1d9,color:#fff
+    style IntegrationAPIs fill:#8b949e,stroke:#c9d1d9,color:#fff
+    
+    style DockerImage fill:#8b949e,stroke:#c9d1d9,color:#fff
+    style K8sDeployment fill:#8b949e,stroke:#c9d1d9,color:#fff
+    style GitHubActions fill:#8b949e,stroke:#c9d1d9,color:#fff
 ```
 
-## Logic Sequence
+---
+
+# Logic Sequence
 
 ```mermaid
 sequenceDiagram
     participant User as User/Client
-    participant UI as Vue.js UI
-    participant API as REST API
-    participant AIBuilder as AI Workflow Builder
+    participant API as API Gateway
+    participant Engine as Workflow Engine
+    participant AI as AI Builder Agent
     participant LLM as LLM Provider
     participant DB as PostgreSQL
+    participant Tool as Tool Executor
 
-    User->>UI: Describe workflow intent
-    UI->>API: POST /workflows/build (prompt)
-    API->>AIBuilder: Invoke builder agent
-    AIBuilder->>LLM: Generate workflow plan
-    LLM-->>AIBuilder: Structured workflow JSON
-    AIBuilder->>DB: Validate & persist workflow
-    DB-->>AIBuilder: Confirmation
-    AIBuilder-->>API: Workflow with metadata
-    API-->>UI: Stream workflow updates
-    UI-->>User: Display generated workflow
-    User->>UI: Execute workflow
-    UI->>API: POST /workflows/execute
-    API->>DB: Load workflow definition
-    DB-->>API: Workflow config
-    API->>API: Execute nodes sequentially
-    API->>DB: Store execution logs
-    DB-->>API: Acknowledgment
-    API-->>UI: Execution results
-    UI-->>User: Display results & logs
+    User->>API: POST /workflows/create (prompt)
+    API->>AI: Build workflow from prompt
+    AI->>LLM: Generate workflow structure
+    LLM-->>AI: Workflow JSON + node configs
+    AI->>Tool: Execute add-node tools
+    Tool->>Engine: Register nodes & connections
+    Engine->>DB: Persist workflow definition
+    DB-->>Engine: Workflow ID
+    Engine-->>API: Workflow created
+    API-->>User: Workflow ID + preview
+
+    User->>API: POST /workflows/{id}/execute
+    API->>Engine: Start execution
+    Engine->>DB: Load workflow definition
+    DB-->>Engine: Workflow config
+    Engine->>Tool: Execute node 1 (trigger)
+    Tool->>Tool: Process input data
+    Tool-->>Engine: Output data
+    Engine->>Tool: Execute node 2 (transform)
+    Tool->>LLM: Call LLM for AI node
+    LLM-->>Tool: LLM response
+    Tool-->>Engine: Transformed data
+    Engine->>DB: Store execution logs
+    DB-->>Engine: Ack
+    Engine-->>API: Execution complete
+    API-->>User: Results + execution trace
 ```
 
-## Architectural Risks
+---
 
-1. **Missing Health Check & Graceful Shutdown Endpoints**: No dedicated `/health` or `/readiness` endpoints detected in core API layer. Kubernetes deployments and load balancers cannot reliably detect service degradation, risking cascading failures during rolling updates or LLM provider outages.
+# Architectural Risks
 
-2. **Hardcoded Secrets & Environment Variable Exposure**: `.devcontainer/docker-compose.yml` and `.github/docker-compose.yml` contain plaintext database passwords (`POSTGRES_PASSWORD=password`). No evidence of secret rotation, HashiCorp Vault integration, or encrypted credential storage in workflow definitions—critical for multi-tenant SaaS deployments.
+1. **Missing Health Check & Graceful Shutdown Endpoints**
+   - No dedicated `/health` or `/readiness` endpoints detected in core API structure. Kubernetes deployments require these for proper pod lifecycle management and traffic routing. Risk: Failed pods remain in service, cascading failures during rolling updates.
 
-3. **Insufficient Error Boundaries in AI Agent Chains**: AI Workflow Builder and Code Builder agents lack comprehensive error recovery patterns. LLM API failures, token limit exceeded scenarios, and malformed JSON responses from LLMs can propagate uncaught, causing workflow generation to fail silently without user-facing error messages or fallback mechanisms.
+2. **Hardcoded Secrets in Configuration & Environment Variables**
+   - `.devcontainer/docker-compose.yml` and `.github/docker-compose.yml` contain plaintext passwords (`POSTGRES_PASSWORD=password`). No evidence of secret management integration (HashiCorp Vault, AWS Secrets Manager). Risk: Credentials exposed in version control, CI logs, and container images.
+
+3. **Insufficient Error Boundary & Fallback Handling in AI Agent Chains**
+   - AI Workflow Builder (`@n8n/ai-workflow-builder.ee`) has complex multi-agent orchestration (Planner → Builder → Responder) with LLM calls but limited circuit-breaker or retry-with-fallback patterns visible. LLM failures cascade without graceful degradation. Risk: Single LLM API outage blocks entire workflow generation, poor user experience.
 
 ---
 
 ## Deployment Guide
 
-The provided infrastructure-as-code configurations leverage Docker Compose for local development and Terraform for production-ready cloud deployments on AWS. The Docker Compose setup includes health checks, volume mappings, resource limits, and environment variable placeholders for sensitive data. The Terraform configuration provisions the necessary cloud resources, including compute, storage, and networking, with a focus on security and scalability.
+The provided infrastructure-as-code configurations leverage Docker Compose for local development and Terraform for production-ready cloud deployment on AWS. The Docker Compose setup includes health checks, volume mapping, resource limits, and environment variable placeholders for secrets. The Terraform configuration provisions the necessary cloud resources, including compute, storage, and networking, with configurable parameters.
 
 ## Docker Compose
 
@@ -160,47 +185,87 @@ version: '3.8'
 
 services:
 
-  api:
-    image: myapp/api:latest
+  api-gateway:
+    image: myapp/api-gateway:${TAG:-latest}
     ports:
       - 3000:3000
-    environment:
-      - DB_HOST=db
-      - DB_PASSWORD=${DB_PASSWORD}
-      - LLM_API_KEY=${LLM_API_KEY}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      - DB_HOST=postgres
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     restart: on-failure
     deploy:
       resources:
         limits:
-          cpus: 2
-          memory: 4096M
+          cpus: 1
+          memory: 512M
 
-  db:
+  workflow-engine:
+    image: myapp/workflow-engine:${TAG:-latest}
+    ports:
+      - 3001:3001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      - DB_HOST=postgres
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+          memory: 512M
+
+  ai-builder:
+    image: myapp/ai-builder:${TAG:-latest}
+    ports:
+      - 3002:3002
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+          memory: 512M
+
+  postgres:
     image: postgres:14
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=myapp
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+    restart: always
+
+  redis:
+    image: redis:6
     volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: on-failure
-    deploy:
-      resources:
-        limits:
-          cpus: 2
-          memory: 4096M
+      - redis-data:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    restart: always
 
 volumes:
-  db-data:
+  postgres-data:
+  redis-data:
 
 networks:
   default:
@@ -214,144 +279,128 @@ provider "aws" {
   region = var.aws_region
 }
 
-# VPC and Networking
+# VPC
 resource "aws_vpc" "main" {
   cidr_block = var.vpc_cidr
 }
 
+# Subnets
 resource "aws_subnet" "public" {
   vpc_id     = aws_vpc.main.id
   cidr_block = var.public_subnet_cidr
+  availability_zone = var.availability_zone
 }
 
+# Security Groups
 resource "aws_security_group" "app" {
   name   = "myapp-security-group"
   vpc_id = aws_vpc.main.id
 
   ingress {
-    from_port   = 3000
-    to_port     = 3000
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+  }
 }
 
-# Database
+# RDS
 resource "aws_db_instance" "postgres" {
-  engine                 = "postgres"
-  engine_version         = "14.5"
-  instance_class        = var.db_instance_type
-  allocated_storage     = 100
-  storage_type           = "gp2"
-  db_name               = "myapp"
-  username               = "myapp"
-  password               = var.db_password
+  engine         = "postgres"
+  engine_version = "14.1"
+  instance_class = "db.t3.micro"
+  db_name        = "myapp"
+  username       = "myapp"
+  password       = var.db_password
   vpc_security_group_ids = [aws_security_group.app.id]
   subnet_id              = aws_subnet.public.id
 }
 
-# Compute
+# S3 Bucket
+resource "aws_s3_bucket" "artifacts" {
+  bucket = "myapp-artifacts"
+  acl    = "private"
+}
+
+# ECS Cluster
 resource "aws_ecs_cluster" "main" {
   name = "myapp-cluster"
 }
 
-resource "aws_ecs_task_definition" "api" {
-  family                   = "myapp-api"
+# ECS Services
+resource "aws_ecs_task_definition" "api_gateway" {
+  family                   = "api-gateway"
   container_definitions    = <<DEFINITION
 [
   {
-    "name": "api",
-    "image": "myapp/api:latest",
+    "name": "api-gateway",
+    "image": "myapp/api-gateway:${var.image_tag}",
     "essential": true,
     "portMappings": [
       {
         "containerPort": 3000,
-        "hostPort": 3000
+        "hostPort": 80
       }
     ],
     "environment": [
-      {
-        "name": "DB_HOST",
-        "value": "${aws_db_instance.postgres.endpoint}"
-      },
-      {
-        "name": "DB_PASSWORD",
-        "value": "${var.db_password}"
-      },
-      {
-        "name": "LLM_API_KEY",
-        "value": "${var.llm_api_key}"
-      }
+      {"name": "DB_HOST", "value": "${aws_db_instance.postgres.endpoint}"},
+      {"name": "DB_PASSWORD", "value": "${var.db_password}"},
+      {"name": "REDIS_HOST", "value": "${aws_elasticache_cluster.redis.cache_nodes[0].address}"},
+      {"name": "REDIS_PASSWORD", "value": "${var.redis_password}"},
+      {"name": "OPENAI_API_KEY", "value": "${var.openai_api_key}"}
     ]
   }
 ]
 DEFINITION
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  memory                   = 4096
-  cpu                      = 2048
+  memory                   = 512
+  cpu                      = 256
 }
 
-resource "aws_ecs_service" "api" {
-  name            = "myapp-api"
+resource "aws_ecs_service" "api_gateway" {
+  name            = "api-gateway"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.api.arn
+  task_definition = aws_ecs_task_definition.api_gateway.arn
   desired_count   = 2
   launch_type     = "FARGATE"
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.api.arn
-    container_name   = "api"
-    container_port   = 3000
-  }
-
-  network_configuration {
-    subnets          = [aws_subnet.public.id]
-    security_groups = [aws_security_group.app.id]
-  }
 }
 
-# Load Balancing
-resource "aws_lb" "main" {
-  name               = "myapp-lb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.app.id]
-  subnets            = [aws_subnet.public.id]
+# ElastiCache
+resource "aws_elasticache_cluster" "redis" {
+  cluster_id           = "myapp-redis"
+  engine               = "redis"
+  node_type           = "cache.t3.micro"
+  num_cache_nodes     = 1
+  parameter_group_name = "default.redis6.x"
+  security_group_ids    = [aws_security_group.app.id]
+  subnet_group_name     = aws_elasticache_subnet_group.private.name
+  password             = var.redis_password
 }
 
-resource "aws_lb_listener" "api" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.api.arn
-  }
-}
-
-resource "aws_lb_target_group" "api" {
-  name        = "myapp-api"
-  port        = 3000
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
-
-  health_check {
-    path                = "/health"
-    healthy_threshold   = 2
-    unhealthy_threshold = 10
-    timeout             = 5
-    interval            = 30
-    matcher             = "200"
-  }
+resource "aws_elasticache_subnet_group" "private" {
+  name       = "myapp-redis-subnet"
+  subnet_ids = [aws_subnet.public.id]
 }
 
 # Outputs
-output "api_url" {
-  description = "API Endpoint URL"
-  value       = aws_lb.main.dns_name
+output "api_gateway_url" {
+  value = "http://${aws_ecs_service.api_gateway.load_balancer[0].dns_name}"
+}
+
+output "postgres_endpoint" {
+  value = aws_db_instance.postgres.endpoint
+}
+
+output "redis_endpoint" {
+  value = aws_elasticache_cluster.redis.cache_nodes[0].address
 }
 ```
 
@@ -360,7 +409,7 @@ output "api_url" {
 ## Repository Stats
 | Metric | Value |
 |--------|-------|
-| Total Files | 18653 |
+| Total Files | 18660 |
 | Total Directories | undefined |
 | Generated | 2026-02-12 |
 | Source | [n8n-io/n8n](https://github.com/n8n-io/n8n) |
